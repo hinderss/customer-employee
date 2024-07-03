@@ -178,3 +178,12 @@ During setup, a pre-registered administrator account is available for initial ac
 - **Password:** `password`
 
 This administrator account has full permissions to manage all aspects of the application.
+
+### Environment Configuration
+To run the application, you need to create a `.env` file with the following content:
+```
+SECRET_KEY = 'your_security_key'
+DEBUG = False
+```
+
+Replace `'your_security_key'` with a secure, random string.
