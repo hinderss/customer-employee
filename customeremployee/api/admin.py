@@ -2,8 +2,9 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 from rest_framework.exceptions import ValidationError
+from django import forms
 
-from .models import User
+from .models import User, Task
 
 
 class CustomUserChangeForm(UserChangeForm):
@@ -33,7 +34,7 @@ class CustomUserChangeForm(UserChangeForm):
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ('username', 'email', 'first_name', 'last_name', 'phone', 'is_staff')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -43,6 +44,7 @@ class CustomUserCreationForm(UserCreationForm):
             self.fields['user_permissions'].required = False
 
 
+@admin.register(User)
 class CustomUserAdmin(UserAdmin):
     model = User
     form = CustomUserChangeForm
@@ -53,10 +55,45 @@ class CustomUserAdmin(UserAdmin):
     list_filter = ('is_staff', 'is_active',)
     fieldsets = (
         (None, {'fields': ('username', 'email')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'phone')}),
-        ('Permissions', {'fields': ('is_staff', 'is_active',)}),
-        ('Groups and Permissions', {'fields': ('user_permissions',), 'classes': ('collapse',)}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'phone', 'role')}),
+        ('Permissions', {'fields': ('is_staff',)}),
+        ('Groups and Permissions', {'fields': ('user_permissions',)}),
+    )
+    add_fieldsets = (
+        (None, {'fields': ('username', 'email', 'password1', 'password2')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'phone', 'role')}),
+        ('Permissions', {'fields': ('is_staff',)}),
+        ('Groups and Permissions', {'fields': ('user_permissions',)}),
     )
 
 
-admin.site.register(User, CustomUserAdmin)
+class TaskForm(forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = ['customer', 'employee', 'status', 'report']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.status == Task.COMPLETED:
+            self.fields['report'].required = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        status = cleaned_data.get('status')
+        employee = cleaned_data.get('employee')
+        report = cleaned_data.get('report')
+
+        if status == Task.COMPLETED and not report:
+            self.add_error('report', 'Report must be set when status is COMPLETED.')
+
+        if status == Task.PENDING and employee:
+            self.add_error('status', f'If employee is set, status should be {Task.IN_PROGRESS}.')
+
+        return cleaned_data
+
+
+@admin.register(Task)
+class TaskAdmin(admin.ModelAdmin):
+    form = TaskForm
+    fields = ['customer', 'employee', 'status', 'report']
+

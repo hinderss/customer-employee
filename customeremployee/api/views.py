@@ -17,12 +17,12 @@ class CustomerRegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [IsAuthenticated, IsEmployeeOrSuperuser, CanAddCustomer]
 
-    def perform_create(self, serializer):
-        serializer.save(role=User.CUSTOMER)
-
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
         return response
+
+    def perform_create(self, serializer):
+        serializer.save(role=User.CUSTOMER)
 
 
 class EmployeeRegisterView(generics.CreateAPIView):
@@ -39,7 +39,7 @@ class EmployeeRegisterView(generics.CreateAPIView):
 
 
 class EmployeeListView(generics.ListAPIView):
-    queryset = User.objects.filter(role=User.EMPLOYEE)
+    queryset = User.employee.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsCustomerOrSuperuser, CanViewEmployees]
 
@@ -58,7 +58,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_permissions(self):
-        if self.action == 'create_task':
+        if self.action == 'create':
             if self.request.user.has_perm('api.can_create_task'):
                 return [permissions.IsAuthenticated()]
             return [permissions.IsAuthenticated(), IsCustomerOrSuperuser()]
@@ -75,25 +75,17 @@ class TaskViewSet(viewsets.ModelViewSet):
             user = self.request.user
             if user.has_perm('api.can_view_all_tasks'):
                 return Task.objects.all()
-            elif user.role == 'employee':
+            elif user.role == User.EMPLOYEE:
                 return Task.objects.filter(employee=user) | Task.objects.filter(employee=None)
-            elif user.role == 'customer':
+            elif user.role == User.CUSTOMER:
                 return Task.objects.filter(customer=user)
         return Task.objects.all()
-
-    @action(detail=False, methods=['post'], url_path='create')
-    def create_task(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(detail=True, methods=['patch'])
     def assign(self, request, pk=None):
         task = self.get_object()
-        if task.status != 'pending':
-            return Response({'detail': 'Task is not pending'}, status=400)
+        if task.status != Task.PENDING:
+            return Response({'detail': 'Task is not pending'}, status=status.HTTP_400_BAD_REQUEST)
         task.employee = request.user
         task.status = Task.IN_PROGRESS
         task.save()

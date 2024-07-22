@@ -100,7 +100,7 @@
 8. **Task Creation**
    - **Endpoint**: 
    ```
-   /tasks/create/
+   /tasks/
    ```
    - **Description**: Creates a new task.
    - **Required Permissions**: `can_add_employee` or to be `Customer`
@@ -108,10 +108,7 @@
    - **Request Body**:
      ```json
      {
-       "title": "Task Title",
-       "description": "Task Description",
-       "due_date": "2024-07-15",
-       "assigned_to": 1  // Employee ID
+       "customer_id": 1
      }
      ```
 
@@ -126,7 +123,7 @@
    - **Request Body**:
      ```json
      {
-       "assigned_to": 1  // Employee ID
+       "employee_id": 1  // Employee ID
      }
      ```
 

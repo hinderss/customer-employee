@@ -24,14 +24,14 @@ class UserSerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     customer = UserSerializer(read_only=True)
     customer_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(role='customer'),
+        queryset=User.customer.all(),
         source='customer',
         write_only=True,
         required=False
     )
     employee = UserSerializer(read_only=True)
     employee_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(role='employee'),
+        queryset=User.employee.all(),
         source='employee',
         write_only=True,
         required=False
@@ -47,14 +47,18 @@ class TaskSerializer(serializers.ModelSerializer):
         validated_data['status'] = Task.PENDING
         user = self.context['request'].user
 
-        if user.role == 'customer':
-            validated_data['customer'] = user
+        if user.role == User.CUSTOMER:
+            if user.has_perm('api.can_create_task') and ('customer' in validated_data):
+                validated_data['customer'] = validated_data['customer']
+            else:
+                validated_data['customer'] = user
             if 'employee' in validated_data:
                 raise serializers.ValidationError("Customers cannot assign employees to tasks.")
-        elif user.role == 'employee':
-            if 'customer' not in validated_data:
-                raise serializers.ValidationError("Employees must assign a customer to the task.")
+        elif user.role == User.EMPLOYEE:
             if 'employee' in validated_data:
-                raise serializers.ValidationError("You can assign a customer only after creation.")
+                raise serializers.ValidationError("You can assign a employee only after creation.")
+        if user.has_perm('api.can_create_task'):
+            if 'customer' not in validated_data:
+                raise serializers.ValidationError("Not customers must provide customer id to assign to the task.")
 
         return Task.objects.create(**validated_data)

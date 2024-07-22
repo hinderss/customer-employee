@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from rest_framework.exceptions import ValidationError
 
@@ -15,6 +15,16 @@ customer_permissions = (
 )
 
 
+class EmployeeUserManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(role=User.EMPLOYEE)
+
+
+class CustomerUserManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(role=User.CUSTOMER)
+
+
 class User(AbstractUser):
     EMPLOYEE = 'employee'
     CUSTOMER = 'customer'
@@ -26,6 +36,10 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     phone = models.CharField(max_length=15, unique=True)
+
+    object = UserManager()
+    employee = EmployeeUserManager()
+    customer = CustomerUserManager()
 
     class Meta:
         permissions = employee_permissions + customer_permissions
@@ -71,3 +85,6 @@ class Task(models.Model):
                               default=PENDING
                               )
     report = models.TextField(blank=True)
+
+    def __str__(self):
+        return f'Task: {self.customer} - {self.employee}'

@@ -14,7 +14,6 @@ urlpatterns = [
     path('register/employee/', EmployeeRegisterView.as_view(), name='employee_register'),
     path('employees/', EmployeeListView.as_view(), name='employee-list'),
     path('me/', CurrentUserView.as_view(), name='current_user'),
-    path('tasks/create/', TaskViewSet.as_view({'post': 'create_task'}), name='task_create'),
     path('tasks/<int:pk>/assign/', TaskViewSet.as_view({'patch': 'assign'}), name='task_assign'),
     path('tasks/<int:pk>/complete/', TaskViewSet.as_view({'patch': 'complete'}), name='task_complete'),
 ]
